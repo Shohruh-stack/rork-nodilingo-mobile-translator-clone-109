@@ -34,7 +34,7 @@ export default function TranslationResultScreen() {
   const handleSpeak = async (text: string, language: string, audioPath?: string) => {
     try {
       if (audioPath && language === 'en') {
-        console.log(`${Platform.OS}: Audio fayl o'ynatilmoqda:`, audioPath);
+        console.log(`[${Platform.OS}] Audio fayl o'ynatilmoqda:`, audioPath);
         
         const sound = new Audio.Sound();
         try {
@@ -44,32 +44,36 @@ export default function TranslationResultScreen() {
             audioUri = audioPath;
           } else {
             const cleanPath = audioPath.replace(/^assets\/audio\//, '').replace(/^audio\//, '').replace(/^\//, '');
-            audioUri = `https://raw.githubusercontent.com/Shohruh-stack/rork-nodilingo-mobile-translator-clone-109/main/assets/audio/${cleanPath}`;
+            audioUri = `https://raw.githubusercontent.com/Shohruh-stack/rork-nodilingo-mobile-translator-clone-109/main/assets/audio/${encodeURIComponent(cleanPath)}`;
           }
           
-          console.log('Audio URL:', audioUri);
-          console.log('Platform:', Platform.OS);
+          console.log(`[${Platform.OS}] Audio URL:`, audioUri);
           
           await Audio.setAudioModeAsync({
             playsInSilentModeIOS: true,
             staysActiveInBackground: false,
             shouldDuckAndroid: true,
+            playThroughEarpieceAndroid: false,
           });
           
-          console.log('Audio yuklanmoqda...');
+          console.log(`[${Platform.OS}] Audio yuklanmoqda...`);
+          
           const result = await sound.loadAsync(
             { uri: audioUri },
-            { shouldPlay: false }
+            { shouldPlay: false },
+            false
           );
           
+          console.log(`[${Platform.OS}] Audio yuklash natijasi:`, JSON.stringify(result));
+          
           if (result.isLoaded) {
-            console.log('Audio yuklandi');
-            await sound.playAsync();
-            console.log('Audio o\'ynatildi');
+            console.log(`[${Platform.OS}] Audio yuklandi, o'ynatilmoqda...`);
+            const playResult = await sound.playAsync();
+            console.log(`[${Platform.OS}] Audio o'ynatish natijasi:`, JSON.stringify(playResult));
             
             sound.setOnPlaybackStatusUpdate((status) => {
               if (status.isLoaded && status.didJustFinish) {
-                console.log('Audio tugadi');
+                console.log(`[${Platform.OS}] Audio tugadi`);
                 sound.unloadAsync();
               }
             });
@@ -77,16 +81,19 @@ export default function TranslationResultScreen() {
             throw new Error('Audio yuklanmadi');
           }
         } catch (audioError: any) {
-          console.error('Audio fayl xatolik:', audioError?.message || audioError);
-          console.log('Speech API ishlatilmoqda (fallback)');
+          console.error(`[${Platform.OS}] Audio fayl xatolik:`, audioError?.message || audioError);
+          if (audioError?.stack) {
+            console.error(`[${Platform.OS}] Stack trace:`, audioError.stack);
+          }
+          console.log(`[${Platform.OS}] Speech API ishlatilmoqda (fallback)`);
           Speech.speak(text, { language });
         }
       } else {
-        console.log('Speech API ishlatilmoqda');
+        console.log(`[${Platform.OS}] Speech API ishlatilmoqda`);
         Speech.speak(text, { language });
       }
-    } catch (error) {
-      console.error('Audio o\'ynatishda xatolik:', error);
+    } catch (error: any) {
+      console.error(`[${Platform.OS}] Audio o'ynatishda xatolik:`, error?.message || error);
       Speech.speak(text, { language });
     }
   };
