@@ -44,7 +44,7 @@ export default function TranslationResultScreen() {
             audioUri = audioPath;
           } else {
             const cleanPath = audioPath.replace(/^assets\/audio\//, '').replace(/^\//, '');
-            audioUri = `https://raw.githubusercontent.com/Shohruh-stack/rork-nodilingo-mobile-translator-clone/main/assets/audio/${cleanPath}`;
+            audioUri = `https://raw.githubusercontent.com/Shohruh-stack/rork-nodilingo-mobile-translator-clone-109/main/assets/audio/${cleanPath}`;
           }
           
           console.log('Audio URL:', audioUri);
