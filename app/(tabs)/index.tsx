@@ -160,19 +160,25 @@ export default function SearchScreen() {
       const fileType = uriParts[uriParts.length - 1];
       console.log('File type:', fileType);
       
-      const audioFile = {
-        uri,
-        name: `recording.${fileType}`,
-        type: `audio/${fileType}`,
-      } as any;
-      
-      formData.append('audio', audioFile);
+      if (Platform.OS === 'web') {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        formData.append('audio', blob, `recording.${fileType}`);
+        console.log('Web: Audio blob qo\'shildi');
+      } else {
+        const audioFile = {
+          uri,
+          name: `recording.${fileType}`,
+          type: `audio/${fileType}`,
+        } as any;
+        formData.append('audio', audioFile);
+        console.log('Mobile: Audio file info:', { name: audioFile.name, type: audioFile.type });
+      }
       const langCode = fromLanguage === 'english' ? 'en' : fromLanguage === 'uzbek' ? 'uz' : 'en';
       formData.append('language', langCode);
       
       console.log('STT API ga so\'rov yuborilmoqda...');
       console.log('Language:', langCode);
-      console.log('Audio file info:', { name: audioFile.name, type: audioFile.type });
       
       const response = await fetch('https://toolkit.rork.com/stt/transcribe/', {
         method: 'POST',

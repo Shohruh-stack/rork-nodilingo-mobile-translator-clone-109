@@ -43,7 +43,7 @@ export default function TranslationResultScreen() {
           if (audioPath.startsWith('http://') || audioPath.startsWith('https://')) {
             audioUri = audioPath;
           } else {
-            const cleanPath = audioPath.replace(/^assets\/audio\//, '').replace(/^\//, '');
+            const cleanPath = audioPath.replace(/^assets\/audio\//, '').replace(/^audio\//, '').replace(/^\//, '');
             audioUri = `https://raw.githubusercontent.com/Shohruh-stack/rork-nodilingo-mobile-translator-clone-109/main/assets/audio/${cleanPath}`;
           }
           
