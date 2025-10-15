@@ -127,17 +127,30 @@ export const [TranslationProvider, useTranslation] = createContextHook(() => {
     }
   }, [fromLanguage, toLanguage]);
 
-  const searchWord = useCallback((query: string): VocabularyEntry | null => {
+  const searchWord = useCallback((query: string, exactMatchOnly: boolean = false): VocabularyEntry | null => {
     const normalizedQuery = query.toLowerCase().trim();
     
-    const result = vocabulary.find((entry) => {
-      const searchField = entry[fromLanguage as keyof VocabularyEntry];
-      if (typeof searchField === 'string') {
-        const normalizedField = searchField.toLowerCase();
-        return normalizedField === normalizedQuery || normalizedField.includes(normalizedQuery);
-      }
-      return false;
-    });
+    let result: VocabularyEntry | undefined;
+    
+    if (exactMatchOnly) {
+      result = vocabulary.find((entry) => {
+        const searchField = entry[fromLanguage as keyof VocabularyEntry];
+        if (typeof searchField === 'string') {
+          const normalizedField = searchField.toLowerCase();
+          return normalizedField === normalizedQuery;
+        }
+        return false;
+      });
+    } else {
+      result = vocabulary.find((entry) => {
+        const searchField = entry[fromLanguage as keyof VocabularyEntry];
+        if (typeof searchField === 'string') {
+          const normalizedField = searchField.toLowerCase();
+          return normalizedField === normalizedQuery || normalizedField.includes(normalizedQuery);
+        }
+        return false;
+      });
+    }
 
     if (result) {
       addToHistory(query, result);
@@ -209,11 +222,12 @@ export const [TranslationProvider, useTranslation] = createContextHook(() => {
     return codes[lang];
   };
 
-  const searchWordWithFallback = useCallback(async (query: string): Promise<VocabularyEntry | null> => {
+  const searchWordWithFallback = useCallback(async (query: string, exactMatchOnly: boolean = false): Promise<VocabularyEntry | null> => {
     console.log(`So'z qidirilmoqda: "${query}"`);
     console.log(`Offline lug'atda so'zlar soni: ${vocabulary.length}`);
+    console.log(`Exact match only: ${exactMatchOnly}`);
     
-    const offlineResult = searchWord(query);
+    const offlineResult = searchWord(query, exactMatchOnly);
     
     if (offlineResult) {
       console.log('So\'z offline lug\'atda topildi!');
@@ -222,7 +236,7 @@ export const [TranslationProvider, useTranslation] = createContextHook(() => {
 
     console.log('So\'z offline lug\'atda topilmadi');
 
-    if (isOnline) {
+    if (isOnline && !exactMatchOnly) {
       console.log('Internet mavjud, online tarjima qilinmoqda...');
       try {
         return await translateOnline(query);
@@ -231,7 +245,7 @@ export const [TranslationProvider, useTranslation] = createContextHook(() => {
         return null;
       }
     } else {
-      console.log('Internet yo\'q, tarjima qilib bo\'lmadi');
+      console.log('Internet yo\'q yoki exact match talab qilingan, tarjima qilib bo\'lmadi');
     }
 
     return null;
