@@ -127,6 +127,29 @@ export const [TranslationProvider, useTranslation] = createContextHook(() => {
     }
   }, [fromLanguage, toLanguage]);
 
+  const getSuggestions = useCallback((query: string, limit: number = 10): VocabularyEntry[] => {
+    if (!query || query.trim().length === 0) {
+      return [];
+    }
+
+    const normalizedQuery = query.toLowerCase().trim();
+    const suggestions: VocabularyEntry[] = [];
+
+    for (const entry of vocabulary) {
+      if (suggestions.length >= limit) break;
+
+      const searchField = entry[fromLanguage as keyof VocabularyEntry];
+      if (typeof searchField === 'string') {
+        const normalizedField = searchField.toLowerCase();
+        if (normalizedField.startsWith(normalizedQuery) || normalizedField.includes(normalizedQuery)) {
+          suggestions.push(entry);
+        }
+      }
+    }
+
+    return suggestions;
+  }, [vocabulary, fromLanguage]);
+
   const searchWord = useCallback((query: string, exactMatchOnly: boolean = false): VocabularyEntry | null => {
     const normalizedQuery = query.toLowerCase().trim();
     
@@ -315,6 +338,7 @@ export const [TranslationProvider, useTranslation] = createContextHook(() => {
     setToLanguage,
     setIsOnline,
     swapLanguages,
+    getSuggestions,
   }), [
     vocabulary,
     favorites,
@@ -332,5 +356,6 @@ export const [TranslationProvider, useTranslation] = createContextHook(() => {
     isFavorite,
     getFavoriteWords,
     swapLanguages,
+    getSuggestions,
   ]);
 });

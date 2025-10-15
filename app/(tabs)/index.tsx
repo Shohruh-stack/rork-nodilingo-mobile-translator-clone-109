@@ -11,6 +11,7 @@ import {
   Text,
   TextInput,
   View,
+  ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Speech from 'expo-speech';
@@ -19,7 +20,7 @@ import { Audio } from 'expo-av';
 export default function SearchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { fromLanguage, toLanguage, searchWordWithFallback, swapLanguages, isOnline, isFavorite, toggleFavorite } = useTranslation();
+  const { fromLanguage, toLanguage, searchWordWithFallback, swapLanguages, isOnline, isFavorite, toggleFavorite, getSuggestions } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
@@ -27,13 +28,18 @@ export default function SearchScreen() {
   const [translationResult, setTranslationResult] = useState<VocabularyEntry | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [suggestions, setSuggestions] = useState<VocabularyEntry[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const handleSearch = async () => {
-    if (searchQuery.trim()) {
+  const handleSearch = async (query?: string) => {
+    const searchText = query || searchQuery.trim();
+    if (searchText) {
       setErrorMessage('');
       setShowResult(false);
+      setShowSuggestions(false);
+      setSuggestions([]);
       try {
-        const result = await searchWordWithFallback(searchQuery.trim());
+        const result = await searchWordWithFallback(searchText);
         setTranslationResult(result);
         setShowResult(true);
         if (!result) {
@@ -45,6 +51,31 @@ export default function SearchScreen() {
         setTranslationResult(null);
         setShowResult(true);
       }
+    }
+  };
+
+  const handleTextChange = (text: string) => {
+    setSearchQuery(text);
+    
+    if (text.trim().length > 0) {
+      const newSuggestions = getSuggestions(text.trim(), 8);
+      setSuggestions(newSuggestions);
+      setShowSuggestions(newSuggestions.length > 0);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+    
+    setShowResult(false);
+  };
+
+  const handleSuggestionPress = (entry: VocabularyEntry) => {
+    const searchField = entry[fromLanguage as keyof VocabularyEntry];
+    if (typeof searchField === 'string') {
+      setSearchQuery(searchField);
+      setShowSuggestions(false);
+      setSuggestions([]);
+      handleSearch(searchField);
     }
   };
 
@@ -305,18 +336,57 @@ export default function SearchScreen() {
           )}
         </Animated.View>
 
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="So&apos;z kiriting"
-            placeholderTextColor="#999"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onSubmitEditing={handleSearch}
-          />
-          <Pressable style={styles.searchButton} onPress={handleSearch}>
-            <Search size={24} color="#FF9800" />
-          </Pressable>
+        <View style={styles.searchWrapper}>
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="So&apos;z kiriting"
+              placeholderTextColor="#999"
+              value={searchQuery}
+              onChangeText={handleTextChange}
+              onSubmitEditing={() => handleSearch()}
+              onFocus={() => {
+                if (searchQuery.trim().length > 0 && suggestions.length > 0) {
+                  setShowSuggestions(true);
+                }
+              }}
+            />
+            <Pressable style={styles.searchButton} onPress={() => handleSearch()}>
+              <Search size={24} color="#FF9800" />
+            </Pressable>
+          </View>
+
+          {showSuggestions && suggestions.length > 0 && (
+            <View style={styles.suggestionsContainer}>
+              <ScrollView
+                style={styles.suggestionsList}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled={true}
+              >
+                {suggestions.map((entry) => {
+                  const displayText = entry[fromLanguage as keyof VocabularyEntry];
+                  const translationText = entry[toLanguage as keyof VocabularyEntry];
+                  
+                  return (
+                    <Pressable
+                      key={entry.id}
+                      style={styles.suggestionItem}
+                      onPress={() => handleSuggestionPress(entry)}
+                    >
+                      <View style={styles.suggestionContent}>
+                        <Text style={styles.suggestionWord}>
+                          {typeof displayText === 'string' ? displayText : ''}
+                        </Text>
+                        <Text style={styles.suggestionTranslation}>
+                          {typeof translationText === 'string' ? translationText : ''}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
         </View>
 
         {showResult && (
@@ -499,6 +569,10 @@ const styles = StyleSheet.create({
   micButtonActive: {
     backgroundColor: '#FFEBEE',
   },
+  searchWrapper: {
+    position: 'relative' as const,
+    zIndex: 1000,
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -511,6 +585,43 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  suggestionsContainer: {
+    position: 'absolute' as const,
+    top: 60,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    maxHeight: 300,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    overflow: 'hidden',
+  },
+  suggestionsList: {
+    maxHeight: 300,
+  },
+  suggestionItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  suggestionContent: {
+    flexDirection: 'column',
+    gap: 4,
+  },
+  suggestionWord: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#333',
+  },
+  suggestionTranslation: {
+    fontSize: 14,
+    color: '#FF9800',
   },
   searchInput: {
     flex: 1,
