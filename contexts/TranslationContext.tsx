@@ -153,6 +153,8 @@ export const [TranslationProvider, useTranslation] = createContextHook(() => {
   const searchWord = useCallback((query: string, exactMatchOnly: boolean = false): VocabularyEntry | null => {
     const normalizedQuery = query.toLowerCase().trim();
     
+    console.log(`[searchWord] Qidirilmoqda: "${normalizedQuery}" (exactMatchOnly: ${exactMatchOnly})`);
+    
     let result: VocabularyEntry | undefined;
     
     if (exactMatchOnly) {
@@ -160,7 +162,11 @@ export const [TranslationProvider, useTranslation] = createContextHook(() => {
         const searchField = entry[fromLanguage as keyof VocabularyEntry];
         if (typeof searchField === 'string') {
           const normalizedField = searchField.toLowerCase();
-          return normalizedField === normalizedQuery;
+          const isMatch = normalizedField === normalizedQuery;
+          if (isMatch) {
+            console.log(`[searchWord] Topildi (exact match): "${searchField}"`);
+          }
+          return isMatch;
         }
         return false;
       });
@@ -169,14 +175,21 @@ export const [TranslationProvider, useTranslation] = createContextHook(() => {
         const searchField = entry[fromLanguage as keyof VocabularyEntry];
         if (typeof searchField === 'string') {
           const normalizedField = searchField.toLowerCase();
-          return normalizedField === normalizedQuery || normalizedField.includes(normalizedQuery);
+          const isMatch = normalizedField === normalizedQuery || normalizedField.includes(normalizedQuery);
+          if (isMatch) {
+            console.log(`[searchWord] Topildi (partial match): "${searchField}"`);
+          }
+          return isMatch;
         }
         return false;
       });
     }
 
     if (result) {
+      console.log(`[searchWord] Natija: id=${result.id}`);
       addToHistory(query, result);
+    } else {
+      console.log(`[searchWord] Natija topilmadi`);
     }
 
     return result || null;
@@ -246,33 +259,39 @@ export const [TranslationProvider, useTranslation] = createContextHook(() => {
   };
 
   const searchWordWithFallback = useCallback(async (query: string, exactMatchOnly: boolean = false): Promise<VocabularyEntry | null> => {
-    console.log(`So'z qidirilmoqda: "${query}"`);
-    console.log(`Offline lug'atda so'zlar soni: ${vocabulary.length}`);
-    console.log(`Exact match only: ${exactMatchOnly}`);
+    console.log(`[searchWordWithFallback] So'z qidirilmoqda: "${query}"`);
+    console.log(`[searchWordWithFallback] Offline lug'atda so'zlar soni: ${vocabulary.length}`);
+    console.log(`[searchWordWithFallback] Exact match only: ${exactMatchOnly}`);
+    console.log(`[searchWordWithFallback] From language: ${fromLanguage}`);
+    console.log(`[searchWordWithFallback] To language: ${toLanguage}`);
     
     const offlineResult = searchWord(query, exactMatchOnly);
     
     if (offlineResult) {
-      console.log('So\'z offline lug\'atda topildi!');
+      console.log('[searchWordWithFallback] So\'z offline lug\'atda topildi!');
       return offlineResult;
     }
 
-    console.log('So\'z offline lug\'atda topilmadi');
+    console.log('[searchWordWithFallback] So\'z offline lug\'atda topilmadi');
 
-    if (isOnline && !exactMatchOnly) {
-      console.log('Internet mavjud, online tarjima qilinmoqda...');
+    if (isOnline) {
+      console.log('[searchWordWithFallback] Internet mavjud, online tarjima qilinmoqda...');
       try {
-        return await translateOnline(query);
+        const onlineResult = await translateOnline(query);
+        if (onlineResult) {
+          console.log('[searchWordWithFallback] Online tarjima muvaffaqiyatli!');
+        }
+        return onlineResult;
       } catch (error) {
-        console.error('Online tarjima xatolik:', error);
+        console.error('[searchWordWithFallback] Online tarjima xatolik:', error);
         return null;
       }
     } else {
-      console.log('Internet yo\'q yoki exact match talab qilingan, tarjima qilib bo\'lmadi');
+      console.log('[searchWordWithFallback] Internet yo\'q, tarjima qilib bo\'lmadi');
     }
 
     return null;
-  }, [searchWord, translateOnline, isOnline, vocabulary.length]);
+  }, [searchWord, translateOnline, isOnline, vocabulary.length, fromLanguage, toLanguage]);
 
   const clearHistory = useCallback(async () => {
     try {

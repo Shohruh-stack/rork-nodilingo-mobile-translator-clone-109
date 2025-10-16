@@ -233,7 +233,7 @@ export default function SearchScreen() {
         console.log('Tanilgan matn:', transcribedText);
         setSearchQuery(transcribedText);
         
-        const result = await searchWordWithFallback(transcribedText);
+        const result = await searchWordWithFallback(transcribedText, true);
         setTranslationResult(result);
         setShowResult(true);
         

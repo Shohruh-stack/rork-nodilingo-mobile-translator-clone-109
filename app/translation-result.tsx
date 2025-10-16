@@ -43,11 +43,16 @@ export default function TranslationResultScreen() {
           if (audioPath.startsWith('http://') || audioPath.startsWith('https://')) {
             audioUri = audioPath;
           } else {
-            const cleanPath = audioPath.replace(/^assets\/audio\//, '').replace(/^audio\//, '').replace(/^\//, '');
-            audioUri = `https://raw.githubusercontent.com/Shohruh-stack/rork-nodilingo-mobile-translator-clone-109/main/assets/audio/${encodeURIComponent(cleanPath)}`;
+            const cleanPath = audioPath
+              .replace(/^assets\/audio\//, '')
+              .replace(/^audio\//, '')
+              .replace(/^\//, '')
+              .replace(/\.zip$/, '.mp3');
+            audioUri = `https://raw.githubusercontent.com/Shohruh-stack/rork-nodilingo-mobile-translator-clone-109/main/assets/audio/${cleanPath}`;
           }
           
           console.log(`[${Platform.OS}] Audio URL:`, audioUri);
+          console.log(`[${Platform.OS}] Audio yuklanmoqda...`);
           
           await Audio.setAudioModeAsync({
             playsInSilentModeIOS: true,
@@ -56,20 +61,18 @@ export default function TranslationResultScreen() {
             playThroughEarpieceAndroid: false,
           });
           
-          console.log(`[${Platform.OS}] Audio yuklanmoqda...`);
-          
           const result = await sound.loadAsync(
             { uri: audioUri },
             { shouldPlay: false },
             false
           );
           
-          console.log(`[${Platform.OS}] Audio yuklash natijasi:`, JSON.stringify(result));
+          console.log(`[${Platform.OS}] Audio yuklash natijasi:`, result.isLoaded ? 'Yuklandi' : 'Yuklanmadi');
           
           if (result.isLoaded) {
-            console.log(`[${Platform.OS}] Audio yuklandi, o'ynatilmoqda...`);
+            console.log(`[${Platform.OS}] Audio o'ynatilmoqda...`);
             const playResult = await sound.playAsync();
-            console.log(`[${Platform.OS}] Audio o'ynatish natijasi:`, JSON.stringify(playResult));
+            console.log(`[${Platform.OS}] Audio o'ynatish boshlandi:`, playResult.isLoaded && 'isPlaying' in playResult && playResult.isPlaying ? 'Ha' : 'Yo\'q');
             
             sound.setOnPlaybackStatusUpdate((status) => {
               if (status.isLoaded && status.didJustFinish) {
@@ -82,9 +85,6 @@ export default function TranslationResultScreen() {
           }
         } catch (audioError: any) {
           console.error(`[${Platform.OS}] Audio fayl xatolik:`, audioError?.message || audioError);
-          if (audioError?.stack) {
-            console.error(`[${Platform.OS}] Stack trace:`, audioError.stack);
-          }
           console.log(`[${Platform.OS}] Speech API ishlatilmoqda (fallback)`);
           Speech.speak(text, { language });
         }
