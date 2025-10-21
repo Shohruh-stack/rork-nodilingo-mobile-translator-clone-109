@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   languageFlag: {
-    fontSize: 24,
+    fontSize: 28,
   },
   languageText: {
     fontSize: 16,
